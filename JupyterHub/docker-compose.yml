@@ -1,0 +1,49 @@
+version: '2'
+
+services:
+
+  # Configuration for main JupyterHub service
+  jupyterhub:
+    build: jupyterhub                # Build the container from this folder.
+    container_name: jupyterhub_hub   # The service will use this container name.
+    image: jupyterhub_hub
+    volumes:                         # Give access to Docker socket.
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:                     # Env variables passed to the Hub process.
+      - DOCKER_NETWORK_NAME=${COMPOSE_PROJECT_NAME}_default
+      - HUB_IP=jupyterhub_hub
+      - HOST
+    labels:                          # Traefik configuration.
+      - "traefik.enable=true"
+      - "traefik.frontend.rule=Host:${HOST}"
+    restart: on-failure
+
+  # Configuration for traefik reverse proxy
+  reverse-proxy:
+    build: reverse-proxy
+    image: jupyterhub_proxy
+    container_name: jupyterhub_proxy
+    ports:                           # Traefik manages the HTTP/HTTPS ports 
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./reverse-proxy/traefik.toml:/etc/traefik/traefik.toml
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./certs:/etc/certs
+    restart: on-failure
+
+  # Configuration for the single-user servers
+  jupyterlab:
+    build: jupyterlab
+    container_name: jupyterhub_throwaway1
+    image: jupyterhub_lab
+    network_mode: none
+    command: echo
+
+  jupyterlab-cuda:
+    build: jupyter-cuda
+    container_name: jupyterhub_throwaway2
+    image: jupyterhub_lab_cuda
+    network_mode: none
+    command: echo
+
