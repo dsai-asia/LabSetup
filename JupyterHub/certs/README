@@ -1,0 +1,8 @@
+
+Place your server certificate and key in this directory. It could be a
+self signed certificate from OpenSSL or a signed one, e.g., using
+LetsEncrypt.
+
+The files should be named "server.crt" and "server.key" if the
+configuration is to be used directly.
+
