@@ -4,7 +4,6 @@ USER root
 
 ENV http_proxy http://192.41.170.23:3128
 ENV https_proxy http://192.41.170.23:3128
-
 RUN apt-get update ; apt-get install -y net-tools iputils-ping
 
 ENV http_proxy ''

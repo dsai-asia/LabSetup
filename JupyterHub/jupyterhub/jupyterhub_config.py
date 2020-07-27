@@ -1,5 +1,5 @@
 
-# JupyterHub configuration for DSAI lab machines
+# JupyterHub configuration for DSAI lab server machines
 
 import os
 
@@ -9,6 +9,9 @@ c = get_config()
 
 c.JupyterHub.admin_access = True
 c.JupyterHub.hub_ip = os.environ['HUB_IP']
+c.JupyterHub.cookie_secret_file = '/persist/jupyterhub_cookie_secret'
+c.JupyterHub.db_url = '/persist/jupyterhub.sqlite'
+c.JupyterHub.cleanup_servers = False
 
 # Authentication (CHANGE FOR YOUR NETWORK SETUP)
 
@@ -54,11 +57,17 @@ class CustomSpawner(DockerSpawner):
 
 c.JupyterHub.spawner_class = CustomSpawner
 
-#c.JupyterHub.services = [
-#    {
-#        'name': 'cull_idle',
-#        'admin': True,
-#        'command': 'python /srv/jupyterhub/cull_idle_servers.py --timeout=3600'.split(),
-#    },
-#]
+# Cull idle single-user servers after 1 hour
+
+import sys
+c.JupyterHub.services = [
+    {
+        'name': 'idle-culler',
+        'admin': True,
+        'command': [
+            sys.executable, '-m',
+            'jupyterhub_idle_culler', '--timeout=3600'
+        ],
+    }
+]
 

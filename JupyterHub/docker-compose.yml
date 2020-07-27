@@ -9,6 +9,7 @@ services:
     image: jupyterhub_hub
     volumes:                         # Give access to Docker socket.
       - /var/run/docker.sock:/var/run/docker.sock
+      - jupyterhub_data:/persist
     environment:                     # Env variables passed to the Hub process.
       - DOCKER_NETWORK_NAME=${COMPOSE_PROJECT_NAME}_default
       - HUB_IP=jupyterhub_hub
@@ -46,4 +47,7 @@ services:
     image: jupyterhub_lab_cuda
     network_mode: none
     command: echo
+
+volumes:
+  jupyterhub_data:
 

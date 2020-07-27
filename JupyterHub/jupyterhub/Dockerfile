@@ -23,7 +23,7 @@ RUN pip install \
     jupyterhub-ldapauthenticator==1.3.0 \
     jupyter-client==6.1.6 \
     netifaces \
-    jupyterhub-idle-culler
+    jupyterhub-idle-culler==1.0
 
 # Install packages for teaching
 RUN pip install nbgrader
