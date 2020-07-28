@@ -18,7 +18,6 @@ c.JupyterHub.cleanup_servers = False
 c.JupyterHub.authenticator_class = 'ldapauthenticator.LDAPAuthenticator'
 c.LDAPAuthenticator.server_address = 'ldap.cs.ait.ac.th'
 c.LDAPAuthenticator.bind_dn_template = [ "uid={username},ou=People,ou=csim,dc=cs,dc=ait,dc=ac,dc=th" ]
-c.Authenticator.admin_users = { 'mdailey' }
 
 # General DockerSpawner configuration
 
@@ -70,4 +69,17 @@ c.JupyterHub.services = [
         ],
     }
 ]
+
+import json
+with open('classes.json') as json_file:
+    data = json.load(json_file)
+    if data['Authenticator']:
+        c.Authenticator.admin_users = data['Authenticator']['admin_users']
+    if data['JupyterHub']:
+        if data['JupyterHub']['load_groups']:
+            c.JupyterHub.load_groups = data['JupyterHub']['load_groups']
+        if data['JupyterHub']['services']:
+            for service in data['JupyterHub']['services']:
+                #c.JupyterHub.services.append(service)
+                print('Service: ' + service['name'])
 

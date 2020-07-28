@@ -4,7 +4,10 @@ services:
 
   # Configuration for main JupyterHub service
   jupyterhub:
-    build: jupyterhub                # Build the container from this folder.
+    build:
+      context: jupyterhub            # Build the container from this folder.
+      args:
+        PROXY: $PROXY
     container_name: jupyterhub_hub   # The service will use this container name.
     image: jupyterhub_hub
     volumes:                         # Give access to Docker socket.
@@ -35,14 +38,20 @@ services:
 
   # Configuration for the single-user servers
   jupyterlab:
-    build: jupyterlab
+    build:
+      context: jupyterlab
+      args:
+        PROXY: $PROXY
     container_name: jupyterhub_throwaway1
     image: jupyterhub_lab
     network_mode: none
     command: echo
 
   jupyterlab-cuda:
-    build: jupyter-cuda
+    build:
+      context: jupyter-cuda
+      args:
+        PROXY: $PROXY
     container_name: jupyterhub_throwaway2
     image: jupyterhub_lab_cuda
     network_mode: none

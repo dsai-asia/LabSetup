@@ -1,0 +1,7 @@
+
+Configuration files for JupyterHub.
+
+General configuration goes in jupyterhub_config.py
+
+Additional configuration information specific to your site goes in
+

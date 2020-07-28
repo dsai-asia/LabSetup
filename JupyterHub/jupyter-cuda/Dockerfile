@@ -1,8 +1,11 @@
 
 FROM ubuntu:18.04
 
-ENV http_proxy http://192.41.170.23:3128
-ENV https_proxy http://192.41.170.23:3128
+ARG PROXY
+
+# Set up proxy server. Make sure .env contains a correct PROXY var.
+ENV http_proxy=$PROXY
+ENV https_proxy=$PROXY
 
 ##########################
 # JUPYTER BASE NOTEBOOK: #
@@ -328,6 +331,12 @@ RUN CUDNN_DOWNLOAD_SUM=3400e91a063b25f7b693f223a2662728a80a83ff32684c9024df28cd8
 
 RUN rm -rf /var/lib/apt/lists/*
 
+###########################
+# nbgrader and extensions #
+###########################
+
+RUN conda install --quiet --yes -c conda-forge nbgrader
+
 ####################
 # Our custom stuff #
 ####################
@@ -345,6 +354,6 @@ WORKDIR $HOME
 ENV http_proxy ''
 ENV https_proxy ''
 
-RUN echo "export http_proxy=http://192.41.170.23:3128" >> /home/jovyan/.bashrc
-RUN echo "export https_proxy=http://192.41.170.23:3128" >> /home/jovyan/.bashrc
+RUN echo "export http_proxy=${PROXY}" >> /home/jovyan/.bashrc
+RUN echo "export https_proxy=${PROXY}" >> /home/jovyan/.bashrc
 

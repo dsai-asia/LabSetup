@@ -1,10 +1,10 @@
 #!/bin/bash
 
-cd "`dirname $0`"
+cd "`dirname $0`"/..
 
-./buildit.sh
+./bin/buildit.sh
 
-./stopit.sh
+./bin/stopit.sh
 
 docker-compose up > jupyter.log 2>&1 &
 
