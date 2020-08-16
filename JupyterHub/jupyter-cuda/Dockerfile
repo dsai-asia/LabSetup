@@ -342,6 +342,7 @@ RUN conda install --quiet --yes -c conda-forge nbgrader
 ####################
 
 RUN conda install --quiet --yes -c pytorch pytorch
+RUN conda install --quiet --yes -c pytorch torchvision
 
 ############################################################
 # Clean up: set user to jovyan, put proxy setup in .bashrc #

@@ -24,7 +24,9 @@ c.LDAPAuthenticator.bind_dn_template = [ "uid={username},ou=People,ou=csim,dc=cs
 c.DockerSpawner.debug = True
 c.DockerSpawner.network_name = os.environ['DOCKER_NETWORK_NAME']
 c.DockerSpawner.image_whitelist = { 'SciPy': 'jupyterhub_lab',
-                                    'SciPy+CUDA': 'jupyterhub_lab_cuda' }
+                                    'SciPy+CUDA': 'jupyterhub_lab_cuda',
+                                    'SciPy+CUDA+NLTK': 'jupyterhub_lab_cuda_nltk' }
+
 c.DockerSpawner.remove_containers = True
 from jupyter_client.localinterfaces import public_ips
 c.DockerSpawner.hub_ip_connect = public_ips()[0]

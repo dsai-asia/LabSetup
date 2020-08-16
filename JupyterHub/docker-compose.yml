@@ -57,6 +57,16 @@ services:
     network_mode: none
     command: echo
 
+  jupyterlab-cuda-nltk:
+    build:
+      context: jupyter-cuda-nltk
+      args:
+        PROXY: $PROXY
+    container_name: jupyterhub_throwaway3
+    image: jupyterhub_lab_cuda_nltk
+    network_mode: none
+    command: echo
+
 volumes:
   jupyterhub_data:
 
