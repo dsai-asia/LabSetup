@@ -84,4 +84,7 @@ with open('classes.json') as json_file:
             for service in data['JupyterHub']['services']:
                 #c.JupyterHub.services.append(service)
                 print('Service: ' + service['name'])
+    if data['DockerSpawner']:
+        if data['DockerSpawner']['image_whitelist']:
+            c.DockerSpawner.image_whitelist = data['DockerSpawner']['image_whitelist']
 
