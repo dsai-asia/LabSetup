@@ -14,8 +14,10 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - jupyterhub_data:/persist
     environment:                     # Env variables passed to the Hub process.
-      - DOCKER_NETWORK_NAME=${COMPOSE_PROJECT_NAME}_default
+      - DOCKER_NETWORK_NAME
+      - JUPYTERHUB_API_TOKEN
       - HUB_IP=jupyterhub_hub
+      - HUB_API_PORT=8081
       - HOST
     labels:                          # Traefik configuration.
       - "traefik.enable=true"
@@ -37,6 +39,7 @@ services:
     restart: on-failure
 
   # Configuration for the single-user servers
+
   jupyterlab:
     build:
       context: jupyterlab
@@ -69,4 +72,10 @@ services:
 
 volumes:
   jupyterhub_data:
+  nbgrader_exchange:
+
+networks:
+  default:
+    external:
+      name: ${DOCKER_NETWORK_NAME}
 

@@ -6,3 +6,5 @@ LetsEncrypt.
 The files should be named "server.crt" and "server.key" if the
 configuration is to be used directly.
 
+The server.crt file is the concatenation of the certificate followed
+by the CA certificate.

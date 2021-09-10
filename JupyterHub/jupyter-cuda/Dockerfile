@@ -11,10 +11,6 @@ ENV https_proxy=$PROXY
 # JUPYTER BASE NOTEBOOK: #
 ##########################
 
-ARG NB_USER="jovyan"
-ARG NB_UID="1000"
-ARG NB_GID="100"
-
 # Fix DL4006
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -40,14 +36,10 @@ RUN echo "en_US.UTF-8 UTF-8" > /etc/locale.gen && \
 # Configure environment
 ENV CONDA_DIR=/opt/conda \
     SHELL=/bin/bash \
-    NB_USER=$NB_USER \
-    NB_UID=$NB_UID \
-    NB_GID=$NB_GID \
     LC_ALL=en_US.UTF-8 \
     LANG=en_US.UTF-8 \
     LANGUAGE=en_US.UTF-8
-ENV PATH=$CONDA_DIR/bin:$PATH \
-    HOME=/home/$NB_USER
+ENV PATH=$CONDA_DIR/bin:$PATH
 
 # Copy a script that we will use to correct permissions after running certain commands
 COPY fix-permissions /usr/local/bin/fix-permissions
@@ -56,27 +48,15 @@ RUN chmod a+rx /usr/local/bin/fix-permissions
 # Enable prompt color in the skeleton .bashrc before creating the default NB_USER
 RUN sed -i 's/^#force_color_prompt=yes/force_color_prompt=yes/' /etc/skel/.bashrc
 
-# Create NB_USER wtih name jovyan user with UID=1000 and in the 'users' group
-# and make sure these dirs are writable by the `users` group.
 RUN echo "auth requisite pam_deny.so" >> /etc/pam.d/su && \
     sed -i.bak -e 's/^%admin/#%admin/' /etc/sudoers && \
     sed -i.bak -e 's/^%sudo/#%sudo/' /etc/sudoers && \
-    useradd -m -s /bin/bash -N -u $NB_UID $NB_USER && \
     mkdir -p $CONDA_DIR && \
-    chown $NB_USER:$NB_GID $CONDA_DIR && \
-    chmod g+w /etc/passwd && \
-    fix-permissions $HOME && \
-    fix-permissions $CONDA_DIR
+    chmod g+w /etc/passwd
 
-USER $NB_UID
-WORKDIR $HOME
 ARG PYTHON_VERSION=default
 
-# Setup work directory for backward-compatibility
-RUN mkdir /home/$NB_USER/work && \
-    fix-permissions /home/$NB_USER
-
-# Install conda as jovyan and check the md5 sum provided on the download site
+# Install conda and check the md5 sum provided on the download site
 ENV MINICONDA_VERSION=4.8.3 \
     MINICONDA_MD5=d63adf39f2c220950a063e0529d4ff74 \
     CONDA_VERSION=4.8.3
@@ -96,17 +76,12 @@ RUN wget --quiet https://repo.continuum.io/miniconda/Miniconda3-py38_${MINICONDA
     conda install --quiet --yes conda && \
     conda install --quiet --yes pip && \
     conda update --all --quiet --yes && \
-    conda clean --all -f -y && \
-    rm -rf /home/$NB_USER/.cache/yarn && \
-    fix-permissions $CONDA_DIR && \
-    fix-permissions /home/$NB_USER
+    conda clean --all -f -y
 
 # Install Tini
 RUN conda install --quiet --yes 'tini=0.18.0' && \
     conda list tini | grep tini | tr -s ' ' | cut -d ' ' -f 1,2 >> $CONDA_DIR/conda-meta/pinned && \
-    conda clean --all -f -y && \
-    fix-permissions $CONDA_DIR && \
-    fix-permissions /home/$NB_USER
+    conda clean --all -f -y
 
 # Install Jupyter Notebook, Lab, and Hub
 # Generate a notebook server config
@@ -116,40 +91,18 @@ RUN conda install --quiet --yes 'tini=0.18.0' && \
 # files across image layers when the permissions change
 RUN conda install --quiet --yes \
     'notebook=6.0.3' \
-    'jupyterhub=1.1.0' \
+    'jupyterhub=1.4.2' \
     'jupyterlab=2.1.5' && \
     conda clean --all -f -y && \
     npm cache clean --force && \
     jupyter notebook --generate-config && \
-    rm -rf $CONDA_DIR/share/jupyter/lab/staging && \
-    rm -rf /home/$NB_USER/.cache/yarn && \
-    fix-permissions $CONDA_DIR && \
-    fix-permissions /home/$NB_USER
+    rm -rf $CONDA_DIR/share/jupyter/lab/staging
 
 EXPOSE 8888
-
-# Configure container startup
-ENTRYPOINT ["tini", "-g", "--"]
-CMD ["start-notebook.sh"]
-
-# Copy local files as late as possible to avoid cache busting
-COPY start.sh start-notebook.sh start-singleuser.sh /usr/local/bin/
-COPY jupyter_notebook_config.py /etc/jupyter/
-
-# Fix permissions on /etc/jupyter as root
-USER root
-RUN fix-permissions /etc/jupyter/
-
-# Switch back to jovyan to avoid accidental container runs as root
-USER $NB_UID
 
 #############################
 # JUPYTER MINIMAL NOTEBOOK: #
 #############################
-
-WORKDIR $HOME
-
-USER root
 
 # Install all OS dependencies for fully functional notebook server
 RUN apt-get update && apt-get install -yq --no-install-recommends \
@@ -177,21 +130,14 @@ RUN apt-get update && apt-get install -yq --no-install-recommends \
     nano \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Switch back to jovyan to avoid accidental container runs as root
-USER ${NB_USER}
-
 ###########################
 # JUPYTER SCIPY NOTEBOOK: #
 ###########################
-
-USER root
 
 # ffmpeg for matplotlib anim & dvipng for latex labels
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ffmpeg dvipng && \
     rm -rf /var/lib/apt/lists/*
-
-USER $NB_UID
 
 # Install Python 3 packages
 RUN conda install --quiet --yes \
@@ -237,33 +183,17 @@ RUN conda install --quiet --yes \
     jupyter labextension install jupyter-matplotlib@^0.7.2 --no-build && \
     jupyter lab build -y && \
     jupyter lab clean -y && \
-    npm cache clean --force && \
-    rm -rf "/home/${NB_USER}/.cache/yarn" && \
-    rm -rf "/home/${NB_USER}/.node-gyp" && \
-    fix-permissions "${CONDA_DIR}" && \
-    fix-permissions "/home/${NB_USER}"
+    npm cache clean --force
 
 # Install facets which does not have a pip or conda package at the moment
 WORKDIR /tmp
 RUN git clone https://github.com/PAIR-code/facets.git && \
     jupyter nbextension install facets/facets-dist/ --sys-prefix && \
-    rm -rf /tmp/facets && \
-    fix-permissions "${CONDA_DIR}" && \
-    fix-permissions "/home/${NB_USER}"
-
-# Import matplotlib the first time to build the font cache.
-ENV XDG_CACHE_HOME="/home/${NB_USER}/.cache/"
-
-RUN MPLBACKEND=Agg python -c "import matplotlib.pyplot" && \
-    fix-permissions "/home/${NB_USER}"
-
-USER $NB_UID
+    rm -rf /tmp/facets
 
 ######################################
 # NVIDIA CUDA 10.2 UBUNTU 18.04 BASE #
 ######################################
-
-USER root
 
 WORKDIR /
 
@@ -341,20 +271,52 @@ RUN conda install --quiet --yes -c conda-forge nbgrader
 # Our custom stuff #
 ####################
 
-RUN conda install --quiet --yes -c pytorch pytorch
+RUN conda install --quiet --yes -c pytorch pytorch=1.5.0
 RUN conda install --quiet --yes -c pytorch torchvision
 
 ############################################################
 # Clean up: set user to jovyan, put proxy setup in .bashrc #
 ############################################################
 
-USER $NB_UID
-
-WORKDIR $HOME
+# Configure container startup
+ENTRYPOINT ["tini", "-g", "--"]
+CMD ["start-notebook.sh"]
 
 ENV http_proxy ''
 ENV https_proxy ''
 
+# Temporary jovyan
+
+ARG NB_USER="jovyan"
+ARG NB_UID="1000"
+ARG NB_GID="100"
+
+ENV NB_USER=$NB_USER \
+    NB_UID=$NB_UID \
+    NB_GID=$NB_GID \
+    HOME=/home/$NB_USER \
+    XDG_CACHE_HOME="/home/${NB_USER}/.cache/"
+
+RUN useradd -l -m -s /bin/bash -N -u "${NB_UID}" "${NB_USER}"
+
 RUN echo "export http_proxy=${PROXY}" >> /home/jovyan/.bashrc
 RUN echo "export https_proxy=${PROXY}" >> /home/jovyan/.bashrc
+
+# Setup work directory for backward-compatibility
+
+WORKDIR $HOME
+
+RUN mkdir /home/$NB_USER/work && \
+    chown $NB_USER:$NB_GID $CONDA_DIR && \
+    fix-permissions $CONDA_DIR && \
+    rm -rf /home/root/.cache/yarn && \
+    rm -rf /home/root/.node-gyp && \
+    MPLBACKEND=Agg python -c "import matplotlib.pyplot" && \
+    fix-permissions "/home/${NB_USER}"
+
+# Copy local files as late as possible to avoid cache busting
+COPY start.sh start-notebook.sh start-singleuser.sh /usr/local/bin/
+COPY jupyter_notebook_config.py /etc/jupyter/
+
+WORKDIR /root
 

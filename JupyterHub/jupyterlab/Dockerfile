@@ -13,9 +13,10 @@ RUN apt-get update ; apt-get install -y net-tools iputils-ping
 ENV http_proxy ''
 ENV https_proxy ''
 
-USER jovyan
-EXPOSE 8888
+RUN echo "export http_proxy=$PROXY" >> /home/jovyan/.bashrc && \
+    echo "export https_proxy=$PROXY" >> /home/jovyan/.bashrc
 
-RUN echo "export http_proxy=${PROXY}" >> /home/jovyan/.bashrc
-RUN echo "export https_proxy=${PROXY}" >> /home/jovyan/.bashrc
+WORKDIR /root
+
+COPY start.sh /usr/local/bin
 

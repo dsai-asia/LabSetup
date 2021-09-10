@@ -4,6 +4,8 @@
 
 set -e
 
+echo "Executing custom start.sh"
+
 # Exec the specified command or fall back on bash
 if [ $# -eq 0 ]; then
     cmd=( "bash" )
@@ -36,15 +38,25 @@ run-hooks () {
     echo "$0: done running hooks in $1"
 }
 
+echo "ID: `id -u`"
+
 run-hooks /usr/local/bin/start-notebook.d
 
 # Handle special flags if we're root
 if [ $(id -u) == 0 ] ; then
 
+    echo "Running start as root"
+
     # Only attempt to change the jovyan username if it exists
     if id jovyan &> /dev/null ; then
         echo "Set username to: $NB_USER"
         usermod -d /home/$NB_USER -l $NB_USER jovyan
+        shopt -s dotglob nullglob
+        rm -rf /home/jovyan/work
+        mv /home/jovyan/* /home/$NB_USER
+        rm -rf /home/jovyan
+        chown -R $NB_USER:$NB_GID /home/$NB_USER
+        cd /home/$NB_USER
     fi
 
     # Handle case where provisioned storage does not have the correct permissions by default
