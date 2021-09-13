@@ -2,5 +2,5 @@
 
 cd "`dirname $0`"/..
 
-docker-compose build
+docker-compose --env-file .env build
 

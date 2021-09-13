@@ -16,6 +16,7 @@ services:
     environment:                     # Env variables passed to the Hub process.
       - DOCKER_NETWORK_NAME
       - JUPYTERHUB_API_TOKEN
+      - JUPYTERHUB_CRYPT_KEY
       - HUB_IP=jupyterhub_hub
       - HUB_API_PORT=8081
       - HOST
@@ -35,7 +36,7 @@ services:
     volumes:
       - ./reverse-proxy/traefik.toml:/etc/traefik/traefik.toml
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./certs:/etc/certs
+      - ./${SSL_CERT_DIR}:/etc/certs
     restart: on-failure
 
   # Configuration for the single-user servers

@@ -6,5 +6,5 @@ cd "`dirname $0`"/..
 
 ./bin/stopit.sh
 
-docker-compose up > jupyter.log 2>&1 &
+docker-compose --env-file .env up > jupyter.log 2>&1 &
 

@@ -9,9 +9,15 @@ ENV http_proxy=$PROXY
 ENV https_proxy=$PROXY
 
 RUN apt-get update ; apt-get install -y net-tools iputils-ping
-RUN conda install -c conda-forge nbgrader
-RUN conda install nose
-RUN conda update -n base conda
+
+USER $NB_UID
+WORKDIR /home/$NB_USER
+
+RUN conda install jupyterhub=1.4.2 && \
+    conda install -c conda-forge nbgrader && \
+    conda install nose && \
+    conda update -n base conda && \
+    fix-permissions $CONDA_DIR
 
 ENV http_proxy ''
 ENV https_proxy ''
@@ -25,9 +31,21 @@ RUN echo "export https_proxy=${PROXY}" >> /home/jovyan/.bashrc
 
 COPY nbgrader_config_global.py /etc/jupyter/nbgrader_config.py
 
+USER root
+RUN mkdir -p /usr/local/share/jupyter && chmod 777 /usr/local/share/jupyter
+
+USER $NB_UID
+
 RUN jupyter nbextension enable --sys-prefix create_assignment/main \
  && jupyter nbextension enable --sys-prefix formgrader/main --section=tree \
- && jupyter serverextension enable --sys-prefix nbgrader.server_extensions.formgrader
+ && jupyter serverextension enable --sys-prefix nbgrader.server_extensions.formgrader \
+ && jupyter nbextension disable --sys-prefix assignment_list/main --section=tree \
+ && jupyter nbextension disable --sys-prefix course_list/main --section=tree \
+ && jupyter serverextension disable --sys-prefix nbgrader.server_extensions.assignment_list \
+ && jupyter serverextension disable --sys-prefix nbgrader.server_extensions.course_list
 
-WORKDIR /home/grader-at82.03
+USER root
+WORKDIR /root
+COPY start.sh /usr/local/bin
+COPY jupyter_notebook_config.py /etc/jupyter
 

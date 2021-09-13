@@ -1,6 +1,7 @@
 server.crt
 server.key
-jupyter.log
+jupyter*.log
 classes.json
 docker-compose.override.yml
 jupyterlab-local-*
+.env-*

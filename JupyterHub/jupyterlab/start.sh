@@ -55,9 +55,15 @@ if [ $(id -u) == 0 ] ; then
         rm -rf /home/jovyan/work
         mv /home/jovyan/* /home/$NB_USER
         rm -rf /home/jovyan
-        chown -R $NB_USER:$NB_GID /home/$NB_USER
+        # chown -R $NB_USER:$NB_GID /home/$NB_USER
+        chown $NB_UID:$NB_GID /home/$NB_USER
+        chown --from=1000:100 -R $NB_UID:$NB_GID /home/$NB_USER
         cd /home/$NB_USER
     fi
+
+    echo "home dir:"
+    ls -alrt /home
+    ls -alrt /home/$NB_USER
 
     # Handle case where provisioned storage does not have the correct permissions by default
     # Ex: default NFS/EFS (no auto-uid/gid)
@@ -157,3 +163,4 @@ else
     echo "Executing the command: ${cmd[@]}"
     exec "${cmd[@]}"
 fi
+

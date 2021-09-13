@@ -282,9 +282,6 @@ RUN conda install --quiet --yes -c pytorch torchvision
 ENTRYPOINT ["tini", "-g", "--"]
 CMD ["start-notebook.sh"]
 
-ENV http_proxy ''
-ENV https_proxy ''
-
 # Temporary jovyan
 
 ARG NB_USER="jovyan"
@@ -304,19 +301,23 @@ RUN echo "export https_proxy=${PROXY}" >> /home/jovyan/.bashrc
 
 # Setup work directory for backward-compatibility
 
-WORKDIR $HOME
-
-RUN mkdir /home/$NB_USER/work && \
-    chown $NB_USER:$NB_GID $CONDA_DIR && \
-    fix-permissions $CONDA_DIR && \
+RUN mkdir -p /home/$NB_USER/work && \
+    chown -R $NB_UID:$NB_GID /home/$NB_USER && \
     rm -rf /home/root/.cache/yarn && \
     rm -rf /home/root/.node-gyp && \
-    MPLBACKEND=Agg python -c "import matplotlib.pyplot" && \
-    fix-permissions "/home/${NB_USER}"
+    fix-permissions $CONDA_DIR && \
+    fix-permissions /home/$NB_USER
+
+USER $NB_UID
+
+RUN MPLBACKEND=Agg python -c "import matplotlib.pyplot"
 
 # Copy local files as late as possible to avoid cache busting
 COPY start.sh start-notebook.sh start-singleuser.sh /usr/local/bin/
 COPY jupyter_notebook_config.py /etc/jupyter/
+
+ENV http_proxy ''
+ENV https_proxy ''
 
 WORKDIR /root
 

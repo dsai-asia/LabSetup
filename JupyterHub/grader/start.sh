@@ -1,81 +1,63 @@
 #!/bin/bash
 
-# User should be set to root in the docker file before calling this.
-
 set -e
 
+echo "Executing custom start.sh"
+
+# Exec the specified command or fall back on bash
+if [ $# -eq 0 ]; then
+    cmd=( "bash" )
+else
+    cmd=( "$@" )
+fi
+
+echo "ID: `id -u`"
+
 if [[ "$NB_USER" == "jovyan" ]]; then
-	echo "We need to have hub usernames for nbgrader to work instead of static user jovyan."
-	exit 1
+    echo "We need to have hub usernames for nbgrader to work instead of static user jovyan."
+    exit 1
+fi
+
+mount | grep jovyan && {
+    echo "Incorrect mount under /home/jovyan."
+    exit 1
+}
+
+if [[ $(id -u) != 0 ]]; then
+    echo "We need root privilege to set up nbgrader"
+    exit 1
 fi
 
 userdel -rf jovyan
+rm -rf /home/jovyan
 
-############################ Create user and group ################################
 # Add user and group.
 if id "${NB_USER}" >/dev/null 2>&1; then
-        echo "User ${NB_USER} exists."
+    echo "User ${NB_USER} exists."
 else
-	echo "User does not exist. Adding user ${NB_USER} (${NB_UID})"
-	# User home directory will already exist because DockerSpawner mounted a docker volume at /home/$NB_USER
-	useradd -u ${NB_UID} ${NB_USER}
+    echo "User does not exist. Adding user ${NB_USER} (${NB_UID})"
+    # User home directory will already exist because DockerSpawner mounted a docker volume at /home/$NB_USER
+    useradd -d /home/${NB_USER} -u ${NB_UID} -g ${NB_GID} ${NB_USER}
 fi
 
-if getent group ${NB_GROUP} > /dev/null 2>&1; then
-        echo "Group ${NB_GROUP} exists."
-else
-	echo "Group does not exist. Adding group ${NB_GROUP} (${NB_GID})"
-	groupadd -g ${NB_GID} ${NB_GROUP}
-fi
-
-# Change group id of the group. Following line is a no op if group $NB_GROUP already has gid $NB_GID
-groupmod -g ${NB_GID} ${NB_GROUP}
-# Change id and group of the user. Following line is a no op if there is no change.
-usermod -u ${NB_UID} -g ${NB_GID} ${NB_USER}
-cd /home/${NB_USER}
-###################################################################################
-
-
-
-########################## Set up directories #####################################
-# Create directory for notebooks.
 mkdir -p /home/${NB_USER}/${NOTEBOOK_DIR}
 mkdir -p /home/${NB_USER}/.jupyter
+chown -R $NB_UID:$NB_GID /home/$NB_USER
+cd /home/$NB_USER
 
-chmod 600 /tmp/students.csv
-chown ${INSTRUCTOR_UID}:${INSTRUCTOR_GID} /tmp/students.csv
-
-chown ${INSTRUCTOR_UID}:${INSTRUCTOR_GID} /srv/nbgrader/${COURSE_NAME}
-
-# Make exchange directory readable and writable by everyone.
-# Take exchange directory as environment variable later.
-# This should be same volume mounted on each user's docker container.
+chown ${NB_UID}:${NB_GID} /srv/nbgrader/exchange
 chmod 777 /srv/nbgrader/exchange
-chown ${INSTRUCTOR_UID}:${INSTRUCTOR_GID} /srv/nbgrader/exchange
 
-if [[ "${IS_INSTRUCTOR}" == "true" && ! -L "/home/$NB_USER/${NOTEBOOK_DIR}/${COURSE_NAME}" ]] ; then
-  # If the user is instructor then point to course directory from user's home.
-  ln -sf /srv/nbgrader/${COURSE_NAME} /home/$NB_USER/${NOTEBOOK_DIR}/${COURSE_NAME} 
+# Enable sudo if requested
+if [[ "$GRANT_SUDO" == "1" || "$GRANT_SUDO" == 'yes' ]]; then
+    echo "Granting $NB_USER sudo access and appending $CONDA_DIR/bin to sudo PATH"
+    echo "$NB_USER ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/notebook
 fi
 
-chown -R ${NB_USER}:${NB_GROUP} /home/${NB_USER}
-##################################################################################
+# Add $CONDA_DIR/bin to sudo secure_path
+sed -r "s#Defaults\s+secure_path\s*=\s*\"?([^\"]+)\"?#Defaults secure_path=\"\1:$CONDA_DIR/bin\"#" /etc/sudoers | grep secure_path > /etc/sudoers.d/path
 
-# Import students.
-if [[ "${IS_INSTRUCTOR}" == "true" ]] ; then
-  # If the user is instructor, then import students in nbgrader database.
-  su $NB_USER -c "env PATH=$PATH nbgrader db student import /tmp/students.csv"
-fi
-
-################## Disable extensions for students #############################
-if [[ "${IS_INSTRUCTOR}" != "true" ]] ; then
-  jupyter nbextension disable --sys-prefix create_assignment/main
-  jupyter nbextension disable --sys-prefix formgrader/main --section=tree
-  jupyter serverextension disable --sys-prefix nbgrader.server_extensions.formgrader
-fi
-################################################################################
-
-
-# Start the single user notebook.
-exec /usr/local/bin/start-singleuser.sh $*
+# Exec the command as NB_USER with the PATH and the rest of the environment preserved
+echo "Executing the command: ${cmd[@]}"
+exec sudo -E -H -u $NB_USER PATH=$PATH XDG_CACHE_HOME=/home/$NB_USER/.cache PYTHONPATH=${PYTHONPATH:-} "${cmd[@]}"
 
